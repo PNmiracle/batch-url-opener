@@ -5,8 +5,10 @@ const urlCount = document.getElementById('urlCount');
 const clipStatus = document.getElementById('clipStatus');
 const btnOpen = document.getElementById('btnOpen');
 const btnQuick = document.getElementById('btnQuick');
+const btnDetect = document.getElementById('btnDetect');
 const btnClear = document.getElementById('btnClear');
 const statusEl = document.getElementById('status');
+const detectResults = document.getElementById('detectResults');
 
 let isVika = false;
 let vikaLinks = [];
@@ -158,3 +160,78 @@ btnQuick.addEventListener('click', async () => {
   // 关闭 popup
   window.close();
 });
+
+// --- 链接检测 ---
+
+const PAGE_TYPE_LABELS = {
+  'personal': '🏠 个人主页',
+  'likely-personal': '🏠 可能是个人主页',
+  'lab': '🧪 实验室页面',
+  'likely-lab': '🧪 可能是实验室页面',
+  'unknown': '❓ 未知',
+  'error': '⚠️ 无法判断'
+};
+
+btnDetect.addEventListener('click', async () => {
+  const urls = getUrls();
+  if (urls.length === 0) {
+    statusEl.textContent = '未识别到链接';
+    statusEl.className = 'status bad';
+    return;
+  }
+
+  btnDetect.disabled = true;
+  btnDetect.textContent = '⏳ 检测中...';
+  detectResults.style.display = 'block';
+  detectResults.innerHTML = '<div style="color:#888;font-size:12px;padding:8px 0;">正在检测 ' + urls.length + ' 个链接...</div>';
+
+  try {
+    const response = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'CHECK_LINKS', links: urls }, resolve);
+    });
+
+    if (response.error) {
+      detectResults.innerHTML = '<div style="color:#e17055;font-size:12px;">检测失败：' + response.error + '</div>';
+      return;
+    }
+
+    renderDetectResults(response.results);
+  } catch (e) {
+    detectResults.innerHTML = '<div style="color:#e17055;font-size:12px;">检测失败：' + e.message + '</div>';
+  } finally {
+    btnDetect.disabled = false;
+    btnDetect.textContent = '🔍 检测';
+  }
+});
+
+function renderDetectResults(results) {
+  const ok = results.filter(r => r.status >= 200 && r.status < 300).length;
+  const dead = results.filter(r => r.status === 404 || r.status >= 500 || r.error).length;
+  const labs = results.filter(r => r.pageType === 'lab' || r.pageType === 'likely-lab').length;
+  const personals = results.filter(r => r.pageType === 'personal' || r.pageType === 'likely-personal').length;
+
+  let html = '<div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.8;">';
+  html += '<span style="color:#00b894;">✅ ' + ok + ' 正常</span>';
+  if (dead > 0) html += ' &nbsp;|&nbsp; <span style="color:#e17055;">❌ ' + dead + ' 异常</span>';
+  html += ' &nbsp;|&nbsp; 🏠 ' + personals + ' &nbsp; 🧪 ' + labs;
+  html += '</div>';
+
+  results.forEach((r, i) => {
+    const bg = i % 2 === 0 ? '#fafbfc' : '';
+    const icon = r.error ? '🔴' : 
+      r.status >= 200 && r.status < 300 ? '✅' :
+      r.status === 404 ? '❌' : r.status >= 500 ? '💥' : '⚠️';
+    const st = r.error ? '无法连接' : r.status + ' ' + (r.statusText || '');
+    const sc = r.error ? '#888' : r.status >= 200 && r.status < 300 ? '#00b894' : '#e17055';
+    const shortUrl = r.url.replace(/^https?:\/\//, '').replace(/\/$/, '').substring(0, 30);
+
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:4px;font-size:11px;cursor:pointer;background:' + bg + ';" onclick="window.open(\'' + r.url + '\',\'_blank\')">';
+    html += '<span>' + icon + '</span>';
+    html += '<span style="font-weight:500;color:' + sc + ';min-width:55px;">' + st + '</span>';
+    html += '<span style="color:#6c5ce7;min-width:70px;">' + (PAGE_TYPE_LABELS[r.pageType] || '❓') + '</span>';
+    html += '<span style="color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + r.url + '">' + shortUrl + '</span>';
+    html += '</div>';
+  });
+
+  detectResults.innerHTML = html;
+}

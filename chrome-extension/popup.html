@@ -42,6 +42,10 @@
   .btn-clear { background: #f0f0f5; color: #555; }
   .btn-clear:hover { background: #e2e2ea; }
 
+  .btn-detect { background: #00b894; color: #fff; }
+  .btn-detect:hover { background: #00a381; }
+  .btn-detect:disabled { opacity: 0.6; cursor: not-allowed; }
+
   .status {
     margin-top: 8px; font-size: 12px; min-height: 16px;
     color: #888;
@@ -73,10 +77,13 @@
 <div class="btn-row">
   <button class="btn-open" id="btnOpen">批量打开</button>
   <button class="btn-quick" id="btnQuick">粘贴并打开</button>
+  <button class="btn-detect" id="btnDetect">🔍 检测</button>
   <button class="btn-clear" id="btnClear">清空</button>
 </div>
 
 <div class="status" id="status"></div>
+
+<div id="detectResults" style="display:none; margin-top:10px; max-height:280px; overflow-y:auto;"></div>
 
 <div class="shortcut-tip">
   <span>Vika 快捷方式：</span>在表格中选中多行后，按 <span>Ctrl+Shift+O</span>（Mac: <span>Cmd+Shift+O</span>）即可一键打开所有选中行的链接；或点击扩展图标自动检测选中内容。<br><br>
