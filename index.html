@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批量打开链接</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f6fa;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    width: 100%; max-width: 680px; padding: 32px;
+  }
+  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+  textarea {
+    width: 100%; height: 220px;
+    border: 2px solid #e2e4ea; border-radius: 10px;
+    padding: 14px; font-size: 14px; line-height: 1.7;
+    font-family: "Menlo", "SF Mono", "Consolas", monospace;
+    resize: vertical; outline: none; transition: border-color 0.2s;
+    color: #333;
+  }
+  textarea:focus { border-color: #6c5ce7; }
+  textarea::placeholder { color: #bbb; }
+
+  .info-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; font-size: 13px; color: #666;
+  }
+  .count { font-weight: 600; color: #6c5ce7; }
+
+  .options {
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    margin-top: 16px; padding: 14px 0;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .btn-group { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  button {
+    padding: 10px 24px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: #6c5ce7; color: #fff; flex: 1; min-width: 140px; }
+  .btn-primary:hover { background: #5a4bd1; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary { background: #f0f0f5; color: #555; }
+  .btn-secondary:hover { background: #e2e2ea; }
+
+  .status {
+    margin-top: 14px; font-size: 13px; min-height: 20px;
+    color: #888; transition: color 0.2s;
+  }
+  .status.success { color: #00b894; }
+  .status.warn { color: #e17055; }
+
+  /* 弹窗拦截后的兜底：可点击链接列表 */
+  .fallback {
+    margin-top: 16px; display: none;
+  }
+  .fallback.show { display: block; }
+  .fallback h3 {
+    font-size: 14px; color: #e17055; margin-bottom: 8px; font-weight: 500;
+  }
+  .fallback .tip {
+    font-size: 12px; color: #999; margin-bottom: 8px;
+  }
+  .fallback .link-list {
+    max-height: 260px; overflow-y: auto;
+    background: #fafbfc; border-radius: 8px; padding: 10px 14px;
+    border: 1px solid #eef0f4;
+  }
+  .fallback .item {
+    font-size: 13px; padding: 5px 0;
+    border-bottom: 1px solid #f0f0f0;
+    word-break: break-all; display: flex; gap: 8px; align-items: flex-start;
+  }
+  .fallback .item:last-child { border-bottom: none; }
+  .fallback .idx {
+    color: #aaa; font-size: 11px; min-width: 22px; flex-shrink: 0; padding-top: 1px;
+  }
+  .fallback a {
+    color: #6c5ce7; text-decoration: none;
+  }
+  .fallback a:hover { text-decoration: underline; }
+
+  /* 预览 */
+  .link-preview { margin-top: 16px; display: none; }
+  .link-preview.show { display: block; }
+  .link-preview h3 {
+    font-size: 14px; color: #555; margin-bottom: 8px; font-weight: 500;
+  }
+  .link-preview .link-list {
+    max-height: 200px; overflow-y: auto;
+    background: #fafbfc; border-radius: 8px; padding: 10px 14px;
+    border: 1px solid #eef0f4;
+  }
+  .link-preview .item {
+    font-size: 13px; color: #444; padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+    word-break: break-all; display: flex; gap: 8px; align-items: flex-start;
+  }
+  .link-preview .item:last-child { border-bottom: none; }
+  .link-preview .idx {
+    color: #aaa; font-size: 11px; min-width: 22px; flex-shrink: 0; padding-top: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>批量打开链接</h1>
+  <p class="subtitle">粘贴链接列表，一键批量在新标签页中打开</p>
+
+  <textarea id="urlInput" placeholder="在这里粘贴链接，每行一个&#10;支持换行 / 逗号 / 空格分隔&#10;&#10;示例：&#10;https://www.baidu.com&#10;https://github.com&#10;https://feishu.cn"></textarea>
+
+  <div class="info-bar">
+    <span>已识别：<span class="count" id="urlCount">0</span> 个链接</span>
+    <span style="cursor:pointer;color:#6c5ce7;font-size:12px;" id="togglePreview">预览链接列表</span>
+  </div>
+
+  <div class="link-preview" id="linkPreview">
+    <h3>链接列表</h3>
+    <div class="link-list" id="linkList"></div>
+  </div>
+
+  <div class="options" style="padding-bottom:0;border:none;margin-top:0;">
+    <span style="font-size:12px;color:#999;">点击按钮直接打开，无需确认</span>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn-primary" id="btnOpen">批量打开</button>
+    <button class="btn-secondary" id="btnClear">清空</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <!-- 兜底：被拦截的链接变成可点击的 -->
+  <div class="fallback" id="fallback">
+    <h3>以下链接被浏览器拦截，请逐个点击打开</h3>
+    <p class="tip">提示：也可以在 Chrome 地址栏右侧点击「弹窗已拦截」图标 → 选择「始终允许此网站的弹出式窗口」</p>
+    <div class="link-list" id="fallbackList"></div>
+  </div>
+</div>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const urlInput = $('#urlInput');
+  const urlCount = $('#urlCount');
+  const statusEl = $('#status');
+  const btnOpen = $('#btnOpen');
+  const btnClear = $('#btnClear');
+  const linkPreview = $('#linkPreview');
+  const linkList = $('#linkList');
+  const togglePreview = $('#togglePreview');
+  const fallback = $('#fallback');
+  const fallbackList = $('#fallbackList');
+
+  let previewVisible = false;
+
+  function extractUrls(text) {
+    const cleaned = text
+      .replace(/[，]/g, ',')
+      .replace(/[\s]+/g, '\n')
+      .split(/[\n,]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    const urls = cleaned.filter(s => {
+      if (/^https?:\/\//i.test(s)) return true;
+      if (/^[\w-]+\.\w{2,}/.test(s)) return true;
+      return false;
+    });
+
+    const seen = new Set();
+    return urls.filter(u => {
+      const norm = /^https?:\/\//i.test(u) ? u : 'https://' + u;
+      if (seen.has(norm)) return false;
+      seen.add(norm);
+      return true;
+    });
+  }
+
+  function normalizeUrl(u) {
+    if (/^https?:\/\//i.test(u)) return u;
+    return 'https://' + u;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderPreview(urls) {
+    linkList.innerHTML = urls.map((u, i) =>
+      `<div class="item"><span class="idx">${i + 1}.</span><span>${escapeHtml(normalizeUrl(u))}</span></div>`
+    ).join('');
+  }
+
+  function updateCount() {
+    const urls = extractUrls(urlInput.value);
+    urlCount.textContent = urls.length;
+    if (previewVisible) renderPreview(urls);
+    return urls;
+  }
+
+  urlInput.addEventListener('input', updateCount);
+
+  togglePreview.addEventListener('click', () => {
+    previewVisible = !previewVisible;
+    linkPreview.classList.toggle('show', previewVisible);
+    togglePreview.textContent = previewVisible ? '隐藏链接列表' : '预览链接列表';
+    if (previewVisible) renderPreview(extractUrls(urlInput.value));
+  });
+
+  btnClear.addEventListener('click', () => {
+    urlInput.value = '';
+    updateCount();
+    statusEl.textContent = '';
+    statusEl.className = 'status';
+    fallback.classList.remove('show');
+  });
+
+  urlInput.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      btnOpen.click();
+    }
+  });
+
+  urlInput.addEventListener('paste', () => {
+    setTimeout(updateCount, 50);
+  });
+
+  function openAll(urls) {
+    const openedUrls = [];
+    const blockedUrls = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      const w = window.open(urls[i], '_blank');
+      if (w) {
+        openedUrls.push(urls[i]);
+      } else {
+        blockedUrls.push(urls[i]);
+      }
+    }
+
+    if (blockedUrls.length === 0) {
+      statusEl.textContent = `已全部打开 ${openedUrls.length} 个链接`;
+      statusEl.className = 'status success';
+      fallback.classList.remove('show');
+    } else {
+      statusEl.textContent = `自动打开 ${openedUrls.length} 个，${blockedUrls.length} 个被拦截（见下方列表，请逐个点击）`;
+      statusEl.className = 'status warn';
+      // 把被拦截的链接渲染成可点击的 <a>
+      fallbackList.innerHTML = blockedUrls.map((u, i) =>
+        `<div class="item"><span class="idx">${i + 1}.</span><a href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(u)}</a></div>`
+      ).join('');
+      fallback.classList.add('show');
+    }
+  }
+
+  btnOpen.addEventListener('click', () => {
+    const urls = extractUrls(urlInput.value);
+    if (urls.length === 0) {
+      statusEl.textContent = '未识别到有效链接，请先粘贴链接';
+      statusEl.className = 'status warn';
+      return;
+    }
+
+    const normalized = urls.map(normalizeUrl);
+    fallback.classList.remove('show');
+    openAll(normalized);
+  });
+
+  updateCount();
+</script>
+</body>
+</html>
