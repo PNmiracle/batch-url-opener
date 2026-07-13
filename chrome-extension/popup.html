@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 420px; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #fff; padding: 16px;
+  }
+  .header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .header h1 { font-size: 16px; color: #1a1a2e; }
+  .header .badge { font-size: 11px; background: #6c5ce7; color: #fff; padding: 2px 8px; border-radius: 10px; }
+
+  textarea {
+    width: 100%; height: 160px;
+    border: 2px solid #e2e4ea; border-radius: 8px;
+    padding: 10px; font-size: 13px; line-height: 1.6;
+    font-family: "Menlo", "SF Mono", "Consolas", monospace;
+    resize: vertical; outline: none; color: #333;
+    margin-bottom: 8px;
+  }
+  textarea:focus { border-color: #6c5ce7; }
+  textarea::placeholder { color: #bbb; }
+
+  .bar {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: #888;
+  }
+  .bar .count { font-weight: 600; color: #6c5ce7; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  button {
+    padding: 8px 16px; border: none; border-radius: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-open { background: #6c5ce7; color: #fff; flex: 1; }
+  .btn-open:hover { background: #5a4bd1; }
+  .btn-quick { background: #00b894; color: #fff; white-space: nowrap; }
+  .btn-quick:hover { background: #00a381; }
+  .btn-clear { background: #f0f0f5; color: #555; }
+  .btn-clear:hover { background: #e2e2ea; }
+
+  .status {
+    margin-top: 8px; font-size: 12px; min-height: 16px;
+    color: #888;
+  }
+  .status.good { color: #00b894; }
+  .status.bad { color: #e17055; }
+
+  .shortcut-tip {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f0f0;
+    font-size: 11px; color: #aaa; line-height: 1.6;
+  }
+  .shortcut-tip span { color: #6c5ce7; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>批量打开链接</h1>
+  <span class="badge">v1.0</span>
+</div>
+
+<textarea id="urlInput" placeholder="粘贴链接到这里，每行一个&#10;支持换行 / 逗号 / 空格分隔&#10;&#10;或点击下方按钮自动读取剪贴板"></textarea>
+
+<div class="bar">
+  <span>链接数：<span class="count" id="urlCount">0</span></span>
+  <span id="clipStatus" style="color:#bbb;"></span>
+</div>
+
+<div class="btn-row">
+  <button class="btn-open" id="btnOpen">批量打开</button>
+  <button class="btn-quick" id="btnQuick">粘贴并打开</button>
+  <button class="btn-clear" id="btnClear">清空</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="shortcut-tip">
+  提示：在 Vika 表格中选中链接并复制后，<span>右键任意页面 → 「打开剪贴板中的所有链接」</span>即可一键打开，无需打开此面板。
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

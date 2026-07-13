@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "批量打开链接",
+  "version": "1.0",
+  "description": "从剪贴板批量打开链接，支持 Vika 表格中复制后一键打开",
+  "permissions": ["clipboardRead", "contextMenus", "tabs", "offscreen"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "批量打开链接",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
