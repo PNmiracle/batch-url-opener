@@ -2,12 +2,12 @@
   "manifest_version": 3,
   "name": "批量打开链接",
   "version": "1.0",
-  "description": "从剪贴板或 Vika 表格中批量打开链接",
+  "description": "从剪贴板或飞书/多维表格中批量打开链接、检测死链、识别 Lab 页 vs 个人主页",
   "permissions": ["clipboardRead", "contextMenus", "tabs", "offscreen"],
-  "host_permissions": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*"],
+  "host_permissions": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*", "*://*.larksuite.com/*", "*://larksuite.com/*", "*://*.feishu.cn/*", "*://feishu.cn/*"],
   "content_scripts": [
     {
-      "matches": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*"],
+      "matches": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*", "*://*.larksuite.com/*", "*://larksuite.com/*", "*://*.feishu.cn/*", "*://feishu.cn/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
@@ -21,7 +21,7 @@
         "default": "Ctrl+Shift+O",
         "mac": "Command+Shift+O"
       },
-      "description": "打开 Vika 表格中选中行的链接"
+      "description": "打开飞书/多维表格中选中行的链接"
     }
   },
   "action": {

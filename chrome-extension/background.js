@@ -38,23 +38,37 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// 快捷键：打开 Vika 表格中选中行的链接
-chrome.commands.onCommand.addListener((command) => {
-  if (command === 'open-selected-links') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length === 0) return;
-      const tab = tabs[0];
-      // 向 content script 请求选中行的链接
-      chrome.tabs.sendMessage(tab.id, { action: 'GET_SELECTED_LINKS' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.log('无法与 content script 通信:', chrome.runtime.lastError.message);
-          return;
-        }
-        if (response && response.links && response.links.length > 0) {
-          openLinks(response.links);
-        }
-      });
-    });
+// 快捷键：打开 Vika/飞书 表格中选中行的链接，或回退到剪贴板
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'open-selected-links') return;
+
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tabs.length === 0) return;
+  const tab = tabs[0];
+
+  // 先尝试获取页面中选中的链接
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, { action: 'GET_SELECTED_LINKS' });
+    if (response && response.links && response.links.length > 0) {
+      openLinks(response.links);
+      return; // 成功，直接返回
+    }
+  } catch (e) {
+    // content script 未注入或页面不支持，继续回退到剪贴板
+  }
+
+  // 回退：从剪贴板读取并打开
+  try {
+    const text = await readClipboard();
+    const urls = extractUrls(text);
+    if (urls.length > 0) {
+      openLinks(urls);
+    } else {
+      // 没有检测到链接，可以通知用户（可选）
+      console.log('快捷键触发：页面无选中链接，剪贴板中也没有检测到链接');
+    }
+  } catch (e) {
+    console.error('快捷键剪贴板回退失败:', e);
   }
 });
 

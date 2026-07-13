@@ -10,37 +10,43 @@ const btnClear = document.getElementById('btnClear');
 const statusEl = document.getElementById('status');
 const detectResults = document.getElementById('detectResults');
 
-let isVika = false;
-let vikaLinks = [];
+let isTablePage = false;
+let tableLinks = [];
 
-// --- 初始化：检测当前页面是否是 Vika ---
+// --- 初始化：检测当前页面是否是 Vika/飞书多维表格 ---
+
+function isTableUrl(url) {
+  if (!url) return false;
+  return url.includes('vika.cn') || url.includes('vika.com') ||
+         url.includes('larksuite.com') || url.includes('feishu.cn');
+}
 
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const tab = tabs[0];
-  if (tab && tab.url && (tab.url.includes('vika.cn') || tab.url.includes('vika.com'))) {
-    isVika = true;
-    clipStatus.textContent = '正在检测 Vika 选中内容...';
+  if (tab && isTableUrl(tab.url)) {
+    isTablePage = true;
+    clipStatus.textContent = '正在检测表格选中内容...';
     // 向 content script 请求选中行的链接
     chrome.tabs.sendMessage(tab.id, { action: 'GET_SELECTED_LINKS' }, (response) => {
       if (chrome.runtime.lastError) {
-        clipStatus.textContent = 'Vika 页面未加载完成';
+        clipStatus.textContent = '表格页面未加载完成';
         return;
       }
       if (response && response.links && response.links.length > 0) {
-        vikaLinks = response.links;
-        urlInput.value = vikaLinks.join('\n');
+        tableLinks = response.links;
+        urlInput.value = tableLinks.join('\n');
         updateCount();
-        clipStatus.textContent = `Vika 中检测到 ${vikaLinks.length} 个链接`;
+        clipStatus.textContent = `表格中检测到 ${tableLinks.length} 个链接`;
         statusEl.textContent = '点击「批量打开」即可打开所有选中行的链接';
         statusEl.className = 'status good';
       } else {
-        clipStatus.textContent = 'Vika 中未检测到选中链接';
+        clipStatus.textContent = '表格中未检测到选中链接';
         // 回退到剪贴板读取
         pasteFromClipboard();
       }
     });
   } else {
-    // 非 Vika 页面，读取剪贴板
+    // 非表格页面，读取剪贴板
     pasteFromClipboard();
   }
 });

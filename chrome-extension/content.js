@@ -1,4 +1,4 @@
-// content.js - 在 Vika 页面中检测选中行并显示浮动操作按钮
+// content.js - 在飞书/多维表格页面中检测选中行并显示浮动操作按钮
 
 let fab = null;
 let fabDetect = null;
@@ -370,7 +370,15 @@ function getSelectedRows() {
     '.selected',
     '.checked',
     '[aria-selected="true"]',
-    '[data-selected="true"]'
+    '[data-selected="true"]',
+    // 飞书多维表格特有
+    '.dtable-row-active',
+    '.dtable-row-selected',
+    '.dtable-cell-selected',
+    '.currentRow',
+    '.table-row-active',
+    '.table-cell-active',
+    '[data-dtable-active="true"]'
   ];
 
   for (const selector of selectors) {
@@ -461,16 +469,14 @@ document.addEventListener('click', () => {
   window._checkTimeout = setTimeout(checkSelection, 200);
 });
 
-// 监听键盘事件（Shift+点击多选）
-document.addEventListener('keydown', () => {
+// 监听键盘事件（Shift+点击多选）——使用 capture 阶段，避免被飞书内部拦截
+function handleKeyEvent(e) {
   clearTimeout(window._checkTimeout);
   window._checkTimeout = setTimeout(checkSelection, 200);
-});
+}
 
-document.addEventListener('keyup', () => {
-  clearTimeout(window._checkTimeout);
-  window._checkTimeout = setTimeout(checkSelection, 200);
-});
+document.addEventListener('keydown', handleKeyEvent, true);
+document.addEventListener('keyup', handleKeyEvent, true);
 
 // 监听来自 background 的消息（快捷键触发）
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
