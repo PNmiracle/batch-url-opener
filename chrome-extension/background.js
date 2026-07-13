@@ -16,20 +16,49 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// 点击扩展图标（无 popup 时的 fallback）
-chrome.action.onClicked.addListener(() => {
-  openUrlsFromClipboard();
+// 快捷键：打开 Vika 表格中选中行的链接
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'open-selected-links') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length === 0) return;
+      const tab = tabs[0];
+      // 向 content script 请求选中行的链接
+      chrome.tabs.sendMessage(tab.id, { action: 'GET_SELECTED_LINKS' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('无法与 content script 通信:', chrome.runtime.lastError.message);
+          return;
+        }
+        if (response && response.links && response.links.length > 0) {
+          openLinks(response.links);
+        }
+      });
+    });
+  }
 });
+
+// 监听来自 content script 的消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'OPEN_LINKS') {
+    openLinks(message.links);
+    sendResponse({ success: true });
+  }
+  return true;
+});
+
+// 打开链接
+function openLinks(links) {
+  for (const url of links) {
+    chrome.tabs.create({ url, active: false });
+  }
+}
 
 // 从剪贴板读取并打开链接
 async function openUrlsFromClipboard() {
   try {
     const text = await readClipboard();
     const urls = extractUrls(text);
-    if (urls.length === 0) return;
-
-    for (const url of urls) {
-      chrome.tabs.create({ url, active: false });
+    if (urls.length > 0) {
+      openLinks(urls);
     }
   } catch (e) {
     console.error('Failed to open URLs from clipboard:', e);

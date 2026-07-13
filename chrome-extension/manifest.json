@@ -2,10 +2,27 @@
   "manifest_version": 3,
   "name": "批量打开链接",
   "version": "1.0",
-  "description": "从剪贴板批量打开链接，支持 Vika 表格中复制后一键打开",
+  "description": "从剪贴板或 Vika 表格中批量打开链接",
   "permissions": ["clipboardRead", "contextMenus", "tabs", "offscreen"],
+  "host_permissions": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "commands": {
+    "open-selected-links": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+O",
+        "mac": "Command+Shift+O"
+      },
+      "description": "打开 Vika 表格中选中行的链接"
+    }
   },
   "action": {
     "default_popup": "popup.html",
