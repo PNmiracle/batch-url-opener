@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "从剪贴板或飞书/多维表格中批量打开链接、检测死链、识别 Lab 页 vs 个人主页",
   "permissions": ["clipboardRead", "contextMenus", "tabs", "offscreen"],
-  "host_permissions": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*", "*://*.larksuite.com/*", "*://larksuite.com/*", "*://*.feishu.cn/*", "*://feishu.cn/*"],
+  "host_permissions": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*", "*://*.larksuite.com/*", "*://larksuite.com/*", "*://*.feishu.cn/*", "*://feishu.cn/*", "*://*/*"],
   "content_scripts": [
     {
       "matches": ["*://*.vika.cn/*", "*://vika.cn/*", "*://*.vika.com/*", "*://vika.com/*", "*://*.larksuite.com/*", "*://larksuite.com/*", "*://*.feishu.cn/*", "*://feishu.cn/*"],
@@ -18,8 +18,8 @@
   "commands": {
     "open-selected-links": {
       "suggested_key": {
-        "default": "Ctrl+Shift+O",
-        "mac": "Command+Shift+O"
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
       },
       "description": "打开飞书/多维表格中选中行的链接"
     }

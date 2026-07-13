@@ -126,6 +126,7 @@ const PAGE_TYPE_LABELS = {
 // 状态图标
 function getStatusIcon(result) {
   if (result.error) return '🔴';
+  if (result.status === 0 && result.statusText === '可达（状态未知）') return '🟡';
   if (result.status >= 200 && result.status < 300) return '✅';
   if (result.status >= 300 && result.status < 400) return '🔄';
   if (result.status === 404 || result.status === 410) return '❌';
@@ -164,7 +165,7 @@ async function startDetection(links) {
     const results = response.results;
     const stats = {
       total: results.length,
-      ok: results.filter(r => r.status >= 200 && r.status < 300).length,
+      ok: results.filter(r => (r.status >= 200 && r.status < 300) || r.status === 0).length,
       redirect: results.filter(r => r.status >= 300 && r.status < 400).length,
       notFound: results.filter(r => r.status === 404 || r.status === 410).length,
       serverError: results.filter(r => r.status >= 500).length,
@@ -276,8 +277,9 @@ function showResultPanel(total, state, errorMsg, results, stats) {
       item.addEventListener('click', () => { window.open(r.url, '_blank'); });
 
       const statusIcon = getStatusIcon(r);
-      const statusText = r.error ? '无法连接' : `${r.status} ${r.statusText}`;
+      const statusText = r.error ? '无法连接' : (r.status === 0 ? '可达' : `${r.status} ${r.statusText}`);
       const statusColor = r.error ? '#888' :
+        r.status === 0 ? '#f0ad4e' :
         r.status >= 200 && r.status < 300 ? '#00b894' :
         r.status >= 300 && r.status < 400 ? '#e17055' :
         r.status === 404 ? '#d63031' : 

@@ -162,74 +162,85 @@ async function checkLinks(urls) {
   return results;
 }
 
-// 检测单个链接
+// 检测单个链接（三层回退：HEAD → GET → no-cors）
 async function checkSingleUrl(url) {
   const norm = /^https?:\/\//i.test(url) ? url : 'https://' + url;
   const result = { url: norm, status: null, statusText: '', pageType: 'unknown', error: null, title: '', finalUrl: norm };
 
-  try {
-    // 先尝试 HEAD 请求（快），失败则降级到 GET
-    let response;
+  const FETCH_TIMEOUT = 6000;
+
+  async function fetchWithTimeout(fetchUrl, opts) {
+    const ctrl = new AbortController();
+    opts = { ...opts, signal: ctrl.signal };
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      response = await fetch(norm, {
-        method: 'HEAD',
-        signal: ctrl.signal,
-        redirect: 'follow',
-        mode: 'cors'
-      });
+      return await fetch(fetchUrl, opts);
+    } finally {
       clearTimeout(timer);
-    } catch (headErr) {
-      // HEAD 失败（可能是 CORS 或服务器不支持），尝试带 no-cors 的 GET
+    }
+  }
+
+  // 第1层：HEAD 请求（快，能拿到状态码）
+  let response = null;
+  let usedNoCors = false;
+
+  try {
+    response = await fetchWithTimeout(norm, { method: 'HEAD', redirect: 'follow' });
+  } catch (_e1) {
+    // 第2层：GET 请求
+    try {
+      response = await fetchWithTimeout(norm, { method: 'GET', redirect: 'follow' });
+    } catch (_e2) {
+      // 第3层：no-cors GET（只能判断可达性）
       try {
-        const ctrl2 = new AbortController();
-        const timer2 = setTimeout(() => ctrl2.abort(), 10000);
-        response = await fetch(norm, {
-          method: 'GET',
-          signal: ctrl2.signal,
-          redirect: 'follow'
-        });
-        clearTimeout(timer2);
-      } catch (getErr) {
-        // 彻底失败，可能是网络不通
-        result.error = getErr.name === 'TimeoutError' || getErr.name === 'AbortError'
+        response = await fetchWithTimeout(norm, { method: 'GET', mode: 'no-cors', redirect: 'follow' });
+        usedNoCors = true;
+      } catch (_e3) {
+        result.error = _e3.name === 'TimeoutError' || _e3.name === 'AbortError'
           ? '请求超时'
           : '无法连接';
+        result.pageType = 'error';
         return result;
       }
     }
+  }
 
-    result.status = response.status;
-    result.statusText = getStatusText(response.status);
-    result.finalUrl = response.url;
+  // no-cors 模式下 response.status 为 0
+  if (usedNoCors) {
+    result.status = 0;
+    result.statusText = '可达（状态未知）';
+    result.pageType = analyzePageType(result.finalUrl, '', '');
+    return result;
+  }
 
-    // 如果请求成功，读取标题和内容用于 Lab 页识别
-    if (response.ok && response.status >= 200 && response.status < 400) {
-      try {
-        const text = await response.text();
-        const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const title = titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim() : '';
+  result.status = response.status;
+  result.statusText = getStatusText(response.status);
+  result.finalUrl = response.url;
 
-        // 去除 HTML 标签取纯文本用于分析
-        const bodyText = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/\s+/g, ' ')
-          .substring(0, 6000);
+  // 如果请求成功（2xx/3xx），读取标题和内容用于 Lab 页识别
+  if (response.ok && response.status >= 200 && response.status < 400) {
+    try {
+      const text = await response.text();
+      const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const title = titleMatch ? titleMatch[1]
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim() : '';
 
-        result.pageType = analyzePageType(result.finalUrl, title, bodyText);
-        result.title = title;
-      } catch (e) {
-        // 无法读取内容，仅基于 URL 分析
-        result.pageType = analyzePageType(result.finalUrl, '', '');
-      }
+      const bodyText = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .substring(0, 6000);
+
+      result.pageType = analyzePageType(result.finalUrl, title, bodyText);
+      result.title = title;
+    } catch (_e) {
+      // 无法读取内容，仅基于 URL 分析
+      result.pageType = analyzePageType(result.finalUrl, '', '');
     }
-  } catch (e) {
-    result.error = e.name === 'TimeoutError' || e.name === 'AbortError'
-      ? '请求超时'
-      : `网络错误`;
+  } else {
+    result.pageType = 'error';
   }
 
   return result;
